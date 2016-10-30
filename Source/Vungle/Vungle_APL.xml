@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--GearVR plugin additions-->
+<root xmlns:android="http://schemas.android.com/apk/res/android">
+	<!-- init section is always evaluated once per architecture -->
+	<trace enable="true"/>
+	<init>
+		<log text="Vungle init"/>		
+	</init>
+
+  <androidManifestUpdates>
+	<addElements tag="application">
+    <activity android:name="com.vungle.publisher.VideoFullScreenAdActivity" android:configChanges="keyboardHidden|orientation|screenSize" android:theme="@android:style/Theme.NoTitleBar.Fullscreen"/>
+    <activity android:name="com.vungle.publisher.MraidFullScreenAdActivity" android:configChanges="keyboardHidden|orientation|screenSize" android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen"/>
+
+  </addElements>
+	
+	
+	<!-- Read App ID from plugin project settings and add to the manifest -->  
+    <setStringFromProperty result="AppId" ini="Engine" section="/Script/Vungle.VungleSettings" property="AppId" default=""/>
+    <setElement result="AppIdMetadata" value="meta-data"/>
+    <addAttribute tag="$AppIdMetadata" name="android:name" value="com.epicgames.ue4.Vungle.AppId"/>
+    <addAttribute tag="$AppIdMetadata" name="android:value" value="$S(AppId)"/>
+    <addElement tag="application" name="AppIdMetadata"/>
+
+  </androidManifestUpdates>
+
+	<!-- optional additions to proguard -->
+	<proguardAdditions>
+		<insert>
+<!-- -keep class com.oculus.** {
+   *;
+}
+-keep class android.app.** {
+   *;
+} -->
+
+-keep class com.vungle.** { public *; }
+-keep class javax.inject.*
+-keepattributes *Annotation*
+-keepattributes Signature
+-keep class dagger.*
+
+		</insert>
+	</proguardAdditions>
+	
+	<!-- optional files or directories to copy to Intermediate/Android/APK -->
+ 	<resourceCopies>		
+		<copyFile src="$S(PluginDir)/../../lib/Android/vungle-publisher-adaptive-id-4.0.2.jar" dst="$S(BuildDir)/libs/vungle-publisher-adaptive-id-4.0.2.jar" />
+		<copyFile src="$S(PluginDir)/../../lib/Android/dagger-2.4.jar" dst="$S(BuildDir)/libs/dagger-2.4.jar" />
+		<copyFile src="$S(PluginDir)/../../lib/Android/javax.inject-1.jar" dst="$S(BuildDir)/libs/javax.inject-1.jar" />
+
+<!--		<isArch arch="armeabi-v7a">
+			<copyFile src="$S(EngineDir)/Source/ThirdParty/Oculus/LibOVRMobile/LibOVRMobile_062/VrApi/Libs/Android/armeabi-v7a/libvrapi.so"
+						dst="$S(BuildDir)/libs/armeabi-v7a/libvrapi.so" />
+		</isArch>
+		<copyFile src="$S(EngineDir)/Source/ThirdParty/Oculus/LibOVRMobile/LibOVRMobile_062/VrApi/Libs/Android/VrApi.jar"
+					dst="$S(BuildDir)/libs/VrApi.jar" />
+		<copyFile src="$S(EngineDir)/Source/ThirdParty/Oculus/LibOVRMobile/LibOVRMobile_062/1stParty/VrPlatform/libs/vrplatlib.jar"
+					dst="$S(BuildDir)/libs/vrplatlib.jar" />
+		<if condition="bRemoveOSIG">
+			<true>
+				<deleteFiles filespec="assets/oculussig_*" />
+			</true>
+		</if>-->
+	</resourceCopies>
+
+	<!-- optional additions to the GameActivity imports in GameActivity.java -->
+	<gameActivityImportAdditions>
+		<insert>
+			import com.vungle.publisher.VunglePub;
+			import com.vungle.publisher.AdConfig;
+			import com.vungle.publisher.Orientation;
+			import com.vungle.publisher.EventListener;
+	</insert>
+	</gameActivityImportAdditions>
+	
+
+	<!-- optional additions to the GameActivity class in GameActivity.java -->
+	<gameActivityClassAdditions>
+		<insert>
+      // get the VunglePub instance
+      final VunglePub vunglePub = VunglePub.getInstance();
+
+      //final AdConfig globalAdConfig = vunglePub.getGlobalAdConfig();
+
+      //private boolean bAdVungleAvailability = false;
+
+
+
+
+      public native void nativeVungleonAdEnd(boolean wasCallToActionClicked);
+
+      public native void nativeVungleonAdPlayableChanged(boolean isAdPlayable);
+
+      public boolean AndroidThunkJava_Vungle_HasRewardedVideo()
+      {
+
+      return vunglePub.isAdPlayable();
+      //return bAdVungleAvailability;
+
+      }
+
+      public void AndroidThunkJava_Vungle_ShowRewardedVideo()
+      {
+      final AdConfig globalAdConfig = vunglePub.getGlobalAdConfig();
+
+      // 'Configuration Options' section.
+      globalAdConfig.setSoundEnabled(true);
+      globalAdConfig.setOrientation(Orientation.matchVideo);
+      globalAdConfig.setBackButtonImmediatelyEnabled(false);
+      globalAdConfig.setIncentivized(true);
+      globalAdConfig.setIncentivizedCancelDialogBodyText("Closing this video early will prevent you from earning your reward. Are you sure?");
+
+      vunglePub.playAd(globalAdConfig);
+      //bAdVungleAvailability = false;
+      //Log.debug("AndroidThunkJava_Vungle_ShowRewardedVideo");
+      }
+
+      private final EventListener vungleDefaultListener = new EventListener() {
+      @Deprecated
+      @Override
+      public void onVideoView(boolean isCompletedView, int watchedMillis, int videoDurationMillis) {
+      // This method is deprecated and will be removed. Please use onAdEnd() instead.
+      }
+
+      @Override
+      public void onAdStart() {
+      // Called before playing an ad.
+      }
+
+      @Override
+      public void onAdUnavailable(String reason) {
+      // Called when VunglePub.playAd() was called but no ad is available to show to the user.
+      }
+
+      @Override
+      public void onAdEnd(boolean wasSuccessfulView, boolean wasCallToActionClicked) {
+      // Called when the user leaves the ad and control is returned to your application.
+      nativeVungleonAdEnd(wasSuccessfulView);
+      //Log.debug("Vungle.onAdEnd");
+      }
+
+      @Override
+      public void onAdPlayableChanged(boolean isAdPlayable) {
+      // Called when ad playability changes.
+
+      //Log.debug("Vungle.onAdPlayableChanged");
+      final boolean enabled = isAdPlayable;
+      nativeVungleonAdPlayableChanged(enabled);
+      }
+
+      };
+
+      private final EventListener vungleSecondListener = new EventListener() {
+      // Vungle SDK allows for multiple listeners to be attached. This secondary event listener is only
+      // going to print some logs for now, but it could be used to Pause music, update a badge icon, etc.
+      @Deprecated
+      @Override
+      public void onVideoView(boolean isCompletedView, int watchedMillis, int videoDurationMillis) {}
+
+      @Override
+      public void onAdStart() {}
+
+      @Override
+      public void onAdUnavailable(String reason) {}
+
+      @Override
+      public void onAdEnd(boolean wasSuccessfulView, boolean wasCallToActionClicked) {}
+
+      @Override
+      public void onAdPlayableChanged(boolean isAdPlayable) {
+      //Log.debug(""));
+      }
+      };
+    </insert>
+	</gameActivityClassAdditions>
+	
+	<!-- optional additions to GameActivity onCreate metadata reading in GameActivity.java -->
+	<gameActivityReadMetadataAdditions>
+		<insert>
+      bundle.getString("com.epicgames.ue4.AdColony.AppId");
+
+      // get your App ID from the app's main page on the Vungle Dashboard after setting up your app
+      final String app_id = bundle.getString("com.epicgames.ue4.Vungle.AppId");
+
+      //Configure Vungle in your launching Activity's onCreate() method
+      //so that ads can be available as soon as possible.
+      vunglePub.init(this, app_id);
+      vunglePub.setEventListeners(vungleDefaultListener, vungleSecondListener);
+      //Log.debug("vunglePub.init(this, app_id)" + app_id);
+
+
+    </insert>
+	</gameActivityReadMetadataAdditions>
+	
+	<!-- optional additions to GameActivity onCreate in GameActivity.java -->
+	<gameActivityOnCreateAdditions>
+    <insert>
+     
+
+        
+		</insert>
+  </gameActivityOnCreateAdditions>
+
+	<!-- optional additions to GameActivity onDestroy in GameActivity.java -->
+	<gameActivityOnDestroyAdditions>
+		<insert>
+		vunglePub.removeEventListeners(vungleDefaultListener, vungleSecondListener);
+		</insert>
+	</gameActivityOnDestroyAdditions>
+	
+	
+	<!-- optional additions to GameActivity onStart in GameActivity.java -->
+	<gameActivityOnStartAdditions>
+		<insert>
+		
+		</insert>
+	</gameActivityOnStartAdditions>
+
+	<!-- optional additions to GameActivity onStop in GameActivity.java -->
+	<gameActivityOnStopAdditions>
+		<insert>
+		
+		</insert>
+	</gameActivityOnStopAdditions>
+	
+
+	<!-- optional additions to GameActivity onPause in GameActivity.java	-->
+	<gameActivityOnPauseAdditions>
+		<insert>
+		vunglePub.onPause();
+		</insert>
+	</gameActivityOnPauseAdditions>
+
+
+	<!-- optional additions to GameActivity onResume in GameActivity.java	-->
+	<gameActivityOnResumeAdditions>
+		<insert>
+		 vunglePub.onResume();
+		</insert>
+	</gameActivityOnResumeAdditions>
+
+
+	<!-- optional additions to GameActivity onActivityResult in GameActivity.java -->
+	<gameActivityOnActivityResultAdditions>
+	</gameActivityOnActivityResultAdditions>
+	
+
+	<!-- optional libraries to load in GameActivity.java before libUE4.so -->
+	<soLoadLibrary>
+		<!-- need this if plugin enabled and supported architecture, even if not packaged for GearVR -->
+	<!-- 	<if condition="bSupported">
+			<true>
+				<loadLibrary name="vrapi" failmsg="GearVR library not loaded and required!" />
+			</true>
+		</if> -->
+	</soLoadLibrary>
+</root>
