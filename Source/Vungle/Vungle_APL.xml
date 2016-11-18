@@ -178,7 +178,7 @@
 	<!-- optional additions to GameActivity onCreate metadata reading in GameActivity.java -->
 	<gameActivityReadMetadataAdditions>
 		<insert>
-      bundle.getString("com.epicgames.ue4.AdColony.AppId");
+      //bundle.getString("com.epicgames.ue4.AdColony.AppId");
 
       // get your App ID from the app's main page on the Vungle Dashboard after setting up your app
       final String app_id = bundle.getString("com.epicgames.ue4.Vungle.AppId");
